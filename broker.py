@@ -1,8 +1,22 @@
 import asyncio
 import logging
 import os
+import socket
 
 from amqtt.broker import Broker
+
+def get_ipv4_address():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Chỉ “kết nối giả” tới 8.8.8.8 để lấy IP của card đang dùng
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except OSError as e:
+        return f"Lỗi mạng: {e}"
+    
+broker = get_ipv4_address()
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +24,7 @@ config = {
     "listeners": {
         "default": {
             "type": "tcp",
-            "bind": "192.168.30.28:1883",
+            "bind": f"{broker}:1883",
         }
     },
     "sys_interval": 10,
@@ -43,5 +57,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format=formatter)
     asyncio.get_event_loop().run_until_complete(test_coro())
     asyncio.get_event_loop().run_forever()
-    # asyncio.run(test_coro())
     # asyncio.run(test_coro())

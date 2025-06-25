@@ -1,21 +1,33 @@
 import time
 import os 
+import socket
 import paho.mqtt.client as paho
 from paho import mqtt
 from datetime import datetime
 
-broker = "192.168.30.28"   
+def get_ipv4_address():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Chỉ “kết nối giả” tới 8.8.8.8 để lấy IP của card đang dùng
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except OSError as e:
+        return f"Lỗi mạng: {e}"
+    
+broker = get_ipv4_address()   
 port = 1883
 topic_sub = "image/topic"
-username = "phuongtrinh" 
-password = "Phuong123"
+username = "testuser" 
+password = "testpass"
 
 def on_connect(client, userdata, flags, rc, properties=None):
     print("CONNACK received with code %s." % rc)
 
 def on_message(client, userdata, msg):
     print(" Ảnh nhận được, đang lưu vào file...")
-    filename = datetime.now().strftime("received_%H%M%S.jpg")
+    filename = datetime.now().strftime("received_%d%m%Y_%H%M%S.jpg")
     with open(filename, "wb") as f:
         f.write(msg.payload)
     print(f" Đã lưu thành file {filename} ({len(msg.payload)} bytes)")
