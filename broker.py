@@ -114,10 +114,28 @@ async def brokerGetMessage():
         while True:
             message = await C.deliver_message()
             packet = message.publish_packet
-            payload = packet.payload.data.decode('utf-8')
+            payload = packet.payload.data#.decode('utf-8')
             topic = packet.variable_header.topic_name
-            logger.info(f"Message and topic [{topic}]: {payload}")
-            log_message(topic, payload, datetime.now().isoformat())
+            is_image = False
+
+            # Nhận diện topic chứa ảnh (ví dụ: images/ hoặc topic_sub của bạn)
+            if topic.startswith("images/") or topic.startswith("image/") or topic.endswith("/image"):
+                is_image = True
+            if is_image:
+                filename = datetime.now().strftime("received_%d%m%Y_%H%M%S.jpg")
+                with open(filename, "wb") as f:
+                    f.write(payload)
+                logger.info(f"Ảnh nhận được trên topic [{topic}], đã lưu thành file {filename} ({len(payload)} bytes)")
+                log_message(topic, "<binary image saved as {}>".format(filename), datetime.now().isoformat())
+            else:
+                try:
+                    msg_text = payload.decode("utf-8")
+                except Exception:
+                    msg_text = str(payload)
+                logger.info(f"Message and topic [{topic}]: {msg_text}")
+                log_message(topic, msg_text, datetime.now().isoformat())
+            #logger.info(f"Message and topic [{topic}]: {payload}")
+            #log_message(topic, payload, datetime.now().isoformat())
     except Exception as ce:
         logger.error("Client exception : %s" % ce)
 
