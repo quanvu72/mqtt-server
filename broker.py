@@ -15,13 +15,17 @@ formatter = "[%(asctime)s] :: %(levelname)s :: %(message)s"
 logging.basicConfig(level=logging.INFO, format=formatter)
 logger = logging.getLogger(__name__)
 latest_messages = {}
-LOG_FILE = datetime.now().strftime("%H%M%S_%d%m_log.json")
 
-#sửa lại phần không có sẵn file log
+img_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "img")
+
+log_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "log")
+log_file = datetime.now().strftime("%d%m_%H%M%S_log.json")
+log_path = os.path.join(log_dir, log_file)
+
 def load_log():
-    if os.path.exists(LOG_FILE):
+    if os.path.exists(log_path):
         try:
-            with open(LOG_FILE, "r", encoding="utf-8") as f:
+            with open(log_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {"clients": {}, "messages": []}
@@ -29,7 +33,7 @@ def load_log():
         return {"clients": {}, "messages": []}
 
 def save_log(log_data):
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
+    with open(log_path, "w", encoding="utf-8") as f:
         json.dump(log_data, f, indent=2, ensure_ascii=False, default=str)
 
 def log_client_connection(client_id, client_address, conn_time):
@@ -72,7 +76,7 @@ config = {
     'sys_interval': 10,
     'auth': {
         'allow-anonymous': True,
-        'password-file': None,
+        'password-file': "passwd",
         'plugins': ['auth_anonymous']
     }
 }
@@ -122,11 +126,12 @@ async def brokerGetMessage():
             if topic.startswith("images/") or topic.startswith("image/") or topic.endswith("/image"):
                 is_image = True
             if is_image:
-                filename = datetime.now().strftime("received_%d%m%Y_%H%M%S.jpg")
-                with open(filename, "wb") as f:
+                filename = datetime.now().strftime("%d%m_%H%M%S_img.jpg")
+                file_path = os.path.join(img_dir, filename)
+                with open(file_path, "wb") as f:
                     f.write(payload)
-                logger.info(f"Ảnh nhận được trên topic [{topic}], đã lưu thành file {filename} ({len(payload)} bytes)")
-                log_message(topic, "<binary image saved as {}>".format(filename), datetime.now().isoformat())
+                logger.info(f"Image received on topic [{topic}], save as {filename} ({len(payload)} bytes)")
+                log_message(topic, "image saved as {}".format(filename), datetime.now().isoformat())
             else:
                 try:
                     msg_text = payload.decode("utf-8")
@@ -144,10 +149,14 @@ async def main():
     await broker.start()
     logger.info("Server start...")
     
-    task1 = asyncio.create_task(client_manager(broker))
-    task2 = asyncio.create_task(brokerGetMessage())
+    asyncio.create_task(client_manager(broker))
+    asyncio.create_task(brokerGetMessage())
 
-    await asyncio.gather(task1, task2)
+    while True:
+        await asyncio.sleep(1)
 
 if __name__ == '__main__':
         asyncio.run(main())
+        '''asyncio.get_event_loop().run_until_complete(main())
+        asyncio.get_event_loop().run_until_complete(brokerGetMessage())
+        asyncio.get_event_loop().run_forever()'''
