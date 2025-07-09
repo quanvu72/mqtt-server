@@ -149,9 +149,11 @@ async def main():
     await broker.start()
     logger.info("Server start...")
     
-    asyncio.create_task(client_manager(broker))
-    asyncio.create_task(brokerGetMessage())
+    task1 = asyncio.create_task(client_manager(broker))
+    task2 = asyncio.create_task(brokerGetMessage())
 
+    await asyncio.gather(task1, task2)
+    
     while True:
         await asyncio.sleep(1)
 
